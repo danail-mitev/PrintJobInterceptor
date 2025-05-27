@@ -1,17 +1,15 @@
 ﻿using Domain.Models;
+using Service;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using Service.Managers;
-using Service.Monitors;
 
 namespace PrintJobInterceptor.ViewModels
 {
-    public class ViewModelMain : ViewModelBase
+    public class ViewModelMain : ViewModelBase, IDisposable
     {
-        private readonly PrintMonitorService _monitorService = new();
-        private readonly PrintJobManager _jobManager = new();
+        private readonly PrintJobCoordinator _coordinator = new();
 
-        public ObservableCollection<PrintJobInfo> PrintJobs { get; } = [];
+        public ObservableCollection<PrintJobInfo> PrintJobs => _coordinator.Jobs;
 
         private PrintJobInfo? _selectedJob;
         public PrintJobInfo? SelectedJob
@@ -30,48 +28,14 @@ namespace PrintJobInterceptor.ViewModels
 
         public ViewModelMain()
         {
-            PauseCommand = new RelayCommand(_ => PauseSelectedJob(), _ => SelectedJob != null);
-            ResumeCommand = new RelayCommand(_ => ResumeSelectedJob(), _ => SelectedJob != null);
-            CancelCommand = new RelayCommand(_ => CancelSelectedJob(), _ => SelectedJob != null);
-
-            _monitorService.PrintJobDetected += OnPrintJobDetected;
-            _monitorService.StartMonitoring();
+            PauseCommand = new RelayCommand(_ => _coordinator.Pause(SelectedJob!), _ => SelectedJob != null);
+            ResumeCommand = new RelayCommand(_ => _coordinator.Resume(SelectedJob!), _ => SelectedJob != null);
+            CancelCommand = new RelayCommand(_ => _coordinator.Cancel(SelectedJob!), _ => SelectedJob != null);
         }
 
-        private void OnPrintJobDetected(object? sender, PrintJobInfo job)
+        public void Dispose()
         {
-            App.Current.Dispatcher.Invoke(() =>
-            {
-                if (!PrintJobs.Any(j => j.JobId == job.JobId && j.PrinterName == job.PrinterName))
-                {
-                    PrintJobs.Add(job);
-                }
-            });
-        }
-
-        private void PauseSelectedJob()
-        {
-            if (SelectedJob != null && int.TryParse(SelectedJob.JobId, out int jobId))
-            {
-                _jobManager.PauseJob(SelectedJob.PrinterName, jobId);
-            }
-        }
-
-        private void ResumeSelectedJob()
-        {
-            if (SelectedJob != null && int.TryParse(SelectedJob.JobId, out int jobId))
-            {
-                _jobManager.ResumeJob(SelectedJob.PrinterName, jobId);
-            }
-        }
-
-        private void CancelSelectedJob()
-        {
-            if (SelectedJob != null && int.TryParse(SelectedJob.JobId, out int jobId))
-            {
-                _jobManager.CancelJob(SelectedJob.PrinterName, jobId);
-                PrintJobs.Remove(SelectedJob);
-            }
+            _coordinator.Dispose();
         }
     }
 }

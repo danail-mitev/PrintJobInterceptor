@@ -9,5 +9,6 @@
         public int TotalPages { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime TimeSubmitted { get; set; }
+        public Guid GroupId { get; set; } = Guid.Empty;
     }
 }
