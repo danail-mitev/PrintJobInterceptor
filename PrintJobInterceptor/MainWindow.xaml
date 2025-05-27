@@ -3,6 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:PrintJobInterceptor.ViewModels"
         Title="Print Job Interceptor" Height="400" Width="800">
+
+    <Window.Resources>
+        <CollectionViewSource x:Key="GroupedJobs" Source="{Binding PrintJobs}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="GroupId" />
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
+    </Window.Resources>
+
     <Window.DataContext>
         <vm:ViewModelMain />
     </Window.DataContext>
@@ -13,7 +22,23 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <DataGrid ItemsSource="{Binding PrintJobs}" SelectedItem="{Binding SelectedJob}" AutoGenerateColumns="False" Grid.Row="0" IsReadOnly="True">
+        <DataGrid ItemsSource="{Binding Source={StaticResource GroupedJobs}}"
+                  SelectedItem="{Binding SelectedJob}"
+                  AutoGenerateColumns="False"
+                  Grid.Row="0"
+                  IsReadOnly="True"
+                  Margin="0,0,0,10">
+            <DataGrid.GroupStyle>
+                <GroupStyle>
+                    <GroupStyle.HeaderTemplate>
+                        <DataTemplate>
+                            <TextBlock FontWeight="Bold" FontSize="14"
+                                       Text="Group: {Binding Name}" />
+                        </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                </GroupStyle>
+            </DataGrid.GroupStyle>
+
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Document" Binding="{Binding DocumentName}" />
                 <DataGridTextColumn Header="User" Binding="{Binding User}" />

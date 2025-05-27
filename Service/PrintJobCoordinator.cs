@@ -13,36 +13,34 @@ namespace Service
         private readonly TimeSpan _groupingTimeout = TimeSpan.FromSeconds(10);
         private readonly Dictionary<string, (DateTime timestamp, Guid groupId)> _recentJobs = new();
 
+        private readonly Action<PrintJobInfo> _jobCallback;
+
         public ObservableCollection<PrintJobInfo> Jobs { get; } = new();
 
-        public PrintJobCoordinator()
+        public PrintJobCoordinator(Action<PrintJobInfo> onJobDiscovered)
         {
+            _jobCallback = onJobDiscovered;
+
             _monitorService.PrintJobDetected += OnPrintJobDetected;
             _monitorService.StartMonitoring();
         }
 
         private void OnPrintJobDetected(object? sender, PrintJobInfo job)
         {
-            App.Current.Dispatcher.Invoke(() =>
+            string key = $"{job.User}_{job.DocumentName}";
+
+            if (_recentJobs.TryGetValue(key, out var entry) &&
+                (DateTime.Now - entry.timestamp) <= _groupingTimeout)
             {
-                string key = $"{job.User}_{job.DocumentName}";
+                job.GroupId = entry.groupId;
+            }
+            else
+            {
+                job.GroupId = Guid.NewGuid();
+                _recentJobs[key] = (DateTime.Now, job.GroupId);
+            }
 
-                if (_recentJobs.TryGetValue(key, out var entry) &&
-                    (DateTime.Now - entry.timestamp) <= _groupingTimeout)
-                {
-                    job.GroupId = entry.groupId;
-                }
-                else
-                {
-                    job.GroupId = Guid.NewGuid();
-                    _recentJobs[key] = (DateTime.Now, job.GroupId);
-                }
-
-                if (!Jobs.Any(j => j.JobId == job.JobId && j.PrinterName == job.PrinterName))
-                {
-                    Jobs.Add(job);
-                }
-            });
+            _jobCallback.Invoke(job);
         }
 
         public void Pause(PrintJobInfo job)
@@ -66,9 +64,6 @@ namespace Service
             }
         }
 
-        public void Dispose()
-        {
-            _monitorService.Dispose();
-        }
+        public void Dispose() => _monitorService.Dispose();
     }
 }

@@ -7,7 +7,7 @@ namespace PrintJobInterceptor.ViewModels
 {
     public class ViewModelMain : ViewModelBase, IDisposable
     {
-        private readonly PrintJobCoordinator _coordinator = new();
+        private readonly PrintJobCoordinator _coordinator;
 
         public ObservableCollection<PrintJobInfo> PrintJobs => _coordinator.Jobs;
 
@@ -28,9 +28,22 @@ namespace PrintJobInterceptor.ViewModels
 
         public ViewModelMain()
         {
+            _coordinator = new PrintJobCoordinator(OnJobDiscovered);
+
             PauseCommand = new RelayCommand(_ => _coordinator.Pause(SelectedJob!), _ => SelectedJob != null);
             ResumeCommand = new RelayCommand(_ => _coordinator.Resume(SelectedJob!), _ => SelectedJob != null);
             CancelCommand = new RelayCommand(_ => _coordinator.Cancel(SelectedJob!), _ => SelectedJob != null);
+        }
+
+        private void OnJobDiscovered(PrintJobInfo job)
+        {
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                if (!_coordinator.Jobs.Any(j => j.JobId == job.JobId && j.PrinterName == job.PrinterName))
+                {
+                    _coordinator.Jobs.Add(job);
+                }
+            });
         }
 
         public void Dispose()
