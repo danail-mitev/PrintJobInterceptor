@@ -1,4 +1,5 @@
 ﻿using Domain.ViewModels;
+using Service.Monitors;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +15,8 @@ namespace PrintJobInterceptor
 {
     public partial class MainWindow : Window
     {
+        private readonly PrintMonitorService _monitor = new();
+
         public MainWindow()
         {
             InitializeComponent();
